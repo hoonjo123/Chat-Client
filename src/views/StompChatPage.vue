@@ -40,6 +40,7 @@ export default{
             messages: [],
             newMessage: "",
             stompClient: null,
+            token: "",
         }
     },
     created(){
@@ -57,8 +58,10 @@ export default{
             // Http 앤드포인트를 사용함.
             const sockJs = new SockJS(`${process.env.VUE_APP_API_BASE_URL}/connect`);
             this.stompClient = Stomp.over(sockJs);
-
-            this.stompClient.connect({},
+            this.token = localStorage.getItem("token")
+            this.stompClient.connect({
+                Authorization: `Bearer ${this.token}`
+            },
                 ()=>{
                     this.stompClient.subscribe(`/topic/1`, (message) => {
                         console.log("Received message: ", message);
