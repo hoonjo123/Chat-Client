@@ -25,6 +25,11 @@ const routes = [
     name: 'SimpleWebsocket',
     component: SimpleWebsocket
     },
+    {
+    path:'/chatpage',
+    name: 'StompChatPage',
+    component: StompChatPage
+    },
 ]
 
 const router = createRouter({
