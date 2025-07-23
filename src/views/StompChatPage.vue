@@ -11,8 +11,9 @@
                             <div 
                             v-for="(msg, index) in messages"
                             :key="index"
+                            :class="['chat-message', msg.senderEmail === this.senderEmail ? 'sent' : 'recieved']"
                             >
-                            {{ msg }}
+                            <strong>{{ msg.senderEmail }}:</strong> {{ msg.message }}
                             </div>
                         </div>
                         <v-text-field
@@ -41,11 +42,19 @@ export default{
             newMessage: "",
             stompClient: null,
             token: "",
+            senderEmail: null,
         }
     },
     created(){
+        this.senderEmail = localStorage.getItem("email");
         this.connectWebsocket();
     },
+    //사용자가 현재 라우트에서 다른 라우트로 이동하려고 할 때 호출되는 훅함수
+    beforeRouteLeave(to, from, next) {
+        this.disconnectWebsocket();
+        next();
+    },
+    //화면을 완전히 꺼버렸을때
     beforeUnmount() {
         //서버에 객체가 계속 쌓이면 안됨
         //정말로 중요한 훅
@@ -53,6 +62,7 @@ export default{
     },
     methods: {
         connectWebsocket(){
+            if(this.stompClient && this.stompClient.connected) return;
             //Stomp 통신을 위한 객체 생성
             //SockJs는 웹소켓을 내장한 향상된 js 라이브러리 임
             // Http 앤드포인트를 사용함.
@@ -64,8 +74,9 @@ export default{
             },
                 ()=>{
                     this.stompClient.subscribe(`/topic/1`, (message) => {
-                        console.log("Received message: ", message);
-                        this.messages.push(message.body); 
+                        const parseMessage = JSON.parse(message.body);
+                        //console.log("Received message: ", message);
+                        this.messages.push(parseMessage); 
                         this.scrollToBottom(); 
                     });
                 }
@@ -73,7 +84,15 @@ export default{
         },
         sendMessage(){
             if(this.newMessage.trim() === "") return; //빈 메시지 방지
-            this.stompClient.send(`/publish/1`, this.newMessage);
+
+            //이메일과 메시지를 조합한 객체 생성
+            const message={
+                senderEmail: this.senderEmail,
+                message: this.newMessage
+            }
+
+            //axios가 아니다보니 직접 Json으로 파싱필요
+            this.stompClient.send(`/publish/1`, JSON.stringify(message));
             this.newMessage = ""; //입력창 초기화
         },
         // 메시지가 들어오면 스크롤을 아래로 자동으로 내려주는 메서드
@@ -84,11 +103,10 @@ export default{
             });
         },
         disconnectWebsocket() {
-            // if (this.ws) {
-            //     this.ws.close(); // 웹소켓 연결 종료 -> 서버의 afterConnectionClosed 함수 호출
-            //     console.log("WebSocket disconnected");
-            //     this.ws = null;
-            // }
+            if(this.stompClient && this.stompClient.connected){
+                this.stompClient.unsubscribe(`/topic/1`);
+                this.stompClient.disconnect();
+            }
         }
     }
 }
@@ -100,5 +118,16 @@ export default{
     overflow-y: auto;
     border: 1px solid #ddd;
     margin-bottom: 10px;
+}
+
+.chat-message {
+    margin-bottom: 10px;
+}
+
+.sent{
+    text-align: right;
+}
+.received{
+    text-align: left;
 }
 </style>

@@ -31,6 +31,7 @@
 
 <script>
 import axios from 'axios'
+import { jwtDecode } from 'jwt-decode';
 
 export default{
     data(){
@@ -45,7 +46,13 @@ export default{
             const res = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/member/doLogin`, loginData);
             console.log(res);
             const token = res.data.token;
+            // role과 email을 localStorage전역에 저장해주기위한 decode (encode되어있기 때문에)
+            const role = jwtDecode(token).role;
+            // 서버의 createToken 메서드를 확인해보면 Jwts.claims().setSubject(email); 에 email이 담겨있음
+            const email = jwtDecode(token).sub;
             localStorage.setItem("token",token);
+            localStorage.setItem("role",role);
+            localStorage.setItem("email",email);
             window.location.href="/";
         }
     }
